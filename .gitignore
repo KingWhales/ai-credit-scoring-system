@@ -4,3 +4,4 @@ ml-service/venv/
 **/__pycache__/
 *.pyc
 *:Zone.Identifier
+.env
