@@ -82,3 +82,48 @@
 - [ ] Light XGBoost hyperparameter tuning
 - [ ] Save/serialize the final trained pipeline for use by `ml-service` API
 - [ ] Refactor notebook logic into reusable `.py` modules ahead of Phase 2 (web application)
+
+## Backend Development (Objective 1, 2 integration)
+
+- Set up PostgreSQL locally via Docker (`postgres:16` image), exposed on port 5432
+- Designed and implemented four SQLAlchemy models: `applicants`, `applications`, `predictions`, `admin_reviews` — reflecting the full loan lifecycle (submission → prediction → admin decision)
+- Built `ml-service/api.py`: a FastAPI wrapper around the trained XGBoost pipeline, exposing a `/predict` endpoint. Handles reconstruction of the full feature engineering pipeline (DAYS_EMPLOYED anomaly correction, income log-transform, behavioural feature defaulting for applicants with no prior payment history) from raw applicant input at inference time
+- Built `backend/main.py`: FastAPI service with endpoints for application submission, application retrieval (single and list), and admin review submission
+- Backend calls `ml-service` internally over HTTP (via a small `ml_client.py` wrapper) rather than importing ML code directly — keeping the two services independently deployable and containerizable, consistent with the planned DevOps architecture
+- Verified the full request lifecycle end-to-end via FastAPI's interactive docs (Swagger UI): application submitted → applicant/application records created → ML service called → prediction stored and returned in a single request
+
+## Frontend Development (Objective 1, 6)
+
+- Scaffolded a React application using Vite
+- **Environment note**: the Vite CLI's newest version requires a Node.js feature (`node:util`'s `styleText`) unavailable in Node 18; resolved by installing Node 20 via `nvm`. Documented as a setup gotcha for reproducibility.
+- Built two primary pages:
+  - `ApplicationForm.jsx` — applicant-facing loan application form, submits directly to the backend and displays the returned prediction
+  - `AdminDashboard.jsx` — lists all submitted applications with their predicted risk (colour-coded low/medium/high), and allows an admin to approve or reject pending applications with notes
+- Configured CORS middleware on the backend to permit requests from the Vite dev server origin (`localhost:5173`), required since frontend and backend run on different ports during local development
+
+## Integration Bug — Field Name Mismatch
+
+A significant bug was identified during end-to-end testing: every application submitted through the frontend received an identical predicted default probability (54.9%), regardless of the applicant's actual financial data.
+
+**Root cause**: the backend's data model uses lowercase field names matching its SQLAlchemy column names (e.g., `amt_income_total`), while the `ml-service`'s Pydantic input schema uses uppercase field names matching the original dataset's column naming convention (e.g., `AMT_INCOME_TOTAL`). Since Pydantic silently ignores unrecognised fields rather than raising an error, every field sent from the backend was dropped, and every applicant was effectively scored using entirely missing data.
+
+**Fix**: introduced an explicit field name mapping in `ml_client.py`, translating backend field names to the `ml-service`'s expected naming convention before each prediction request.
+
+**Lesson for the report**: this is a useful, concrete example of a class of bug that is easy to miss precisely because the system doesn't fail loudly — both services returned valid HTTP 200 responses throughout, and the application "worked" in the sense that predictions were returned. Only comparing outputs across genuinely different inputs surfaced the issue. This has been noted as a case for stronger integration testing and/or schema validation between services going forward.
+
+## Current System Status
+
+The system is functionally complete end-to-end for a single applicant flow:
+1. Applicant submits a loan application via the React form
+2. Backend persists the applicant and application records to PostgreSQL
+3. Backend calls the ML service, which reconstructs the training-time feature pipeline and returns a default probability
+4. The prediction is stored and displayed to the applicant
+5. An admin views all applications with risk indicators on a dashboard and can approve or reject each one
+
+## Next Steps
+
+- [ ] Surface SHAP explanations in the admin dashboard (currently only available in the notebook)
+- [ ] Basic authentication for the admin dashboard
+- [ ] Applicant-facing status tracking view
+- [ ] Formal system evaluation (Objective 7): predictive accuracy, explainability, and usability assessment
+- [ ] Containerize all services (Dockerfiles for backend, ml-service, frontend) ahead of the DevOps pipeline (Objective 8)
