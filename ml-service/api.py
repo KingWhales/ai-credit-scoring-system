@@ -2,7 +2,7 @@
 api.py
 
 FastAPI service exposing the trained credit default model for
-predictions. This is what the backend application calls internally
+predictions, including SHAP-based explanations. This is what the backend application calls internally
 to score new loan applications.
 
 Run locally with:
@@ -10,16 +10,18 @@ Run locally with:
 """
 
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import joblib
 import numpy as np
 import pandas as pd
+import shap
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 MODEL_PATH = Path(__file__).resolve().parent / "models" / "xgb_credit_model.pkl"
 DAYS_EMPLOYED_PLACEHOLDER = 365243
+TOP_N_FEATURES = 5
 
 BEHAVIORAL_COLS = [
     "avg_payment_delay",
@@ -30,16 +32,16 @@ BEHAVIORAL_COLS = [
     "num_installments",
 ]
 
-app = FastAPI(title="Credit Scoring ML Service", version="0.1.0")
+app = FastAPI(title="Credit Scoring ML Service", version="0.2.0")
 
 # Loaded once at startup
 pipeline = None
 expected_columns = None
-
+explainer = None
 
 @app.on_event("startup")
 def load_model():
-    global pipeline, expected_columns
+    global pipeline, expected_columns, explainer
     if not MODEL_PATH.exists():
         raise RuntimeError(
             f"No trained model found at {MODEL_PATH}. Run `python -m src.train` first."
@@ -51,6 +53,8 @@ def load_model():
     categorical_cols = preprocessor.transformers_[1][2]
     expected_columns = list(numeric_cols) + list(categorical_cols)
 
+    classifier = pipeline.named_steps["classifier"]
+    explainer = shap.TreeExplainer(classifier)
 
 class ApplicantInput(BaseModel):
     """
@@ -79,9 +83,16 @@ class ApplicantInput(BaseModel):
     EXT_SOURCE_3: Optional[float] = None
 
 
+class FeatureContribution(BaseModel):
+    feature: str
+    value: Optional[str] = None
+    contribution: float
+    direction: str # "increases_risk" or "decreases_risk"
+
 class PredictionResponse(BaseModel):
     default_probability: float
     risk_flag_no_installment_history: bool
+    top_factors: List[FeatureContribution]
 
 
 def build_feature_row(applicant: ApplicantInput) -> pd.DataFrame:
@@ -127,6 +138,45 @@ def build_feature_row(applicant: ApplicantInput) -> pd.DataFrame:
     return df[expected_columns]
 
 
+def compute_top_factors(feature_row: pd.DataFrame) -> List[FeatureContribution]:
+    """
+    Compute SHAP values for a single applicant and return the top N
+    features by absolute contribution, in a format suitable for
+    display in the admin dashboard.
+    """
+    preprocessor = pipeline.named_steps["preprocessor"]
+    transformed = preprocessor.transform(feature_row)
+ 
+    numeric_cols = preprocessor.transformers_[0][2]
+    categorical_cols = preprocessor.transformers_[1][2]
+    onehot_names = (
+        preprocessor.named_transformers_["cat"]
+        .named_steps["onehot"]
+        .get_feature_names_out(categorical_cols)
+        .tolist()
+    )
+    feature_names = list(numeric_cols) + onehot_names
+ 
+    shap_values = explainer.shap_values(transformed)[0]
+ 
+    contributions = list(zip(feature_names, shap_values, transformed[0]))
+    contributions.sort(key=lambda x: abs(x[1]), reverse=True)
+ 
+    top_factors = []
+    for name, contribution, value in contributions[:TOP_N_FEATURES]:
+        top_factors.append(
+            FeatureContribution(
+                feature=name,
+                value=str(round(value, 2)) if isinstance(value, (int, float)) else str(value),
+                contribution=round(float(contribution), 4),
+                direction="increases_risk" if contribution > 0 else "decreases_risk",
+            )
+        )
+ 
+    return top_factors
+ 
+
+
 @app.post("/predict", response_model=PredictionResponse)
 def predict(applicant: ApplicantInput):
     if pipeline is None:
@@ -134,10 +184,12 @@ def predict(applicant: ApplicantInput):
 
     feature_row = build_feature_row(applicant)
     probability = float(pipeline.predict_proba(feature_row)[0][1])
+    top_factors = compute_top_factors(feature_row)
 
     return PredictionResponse(
         default_probability=round(probability, 4),
         risk_flag_no_installment_history=True,
+        top_factors=top_factors,
     )
 
 
