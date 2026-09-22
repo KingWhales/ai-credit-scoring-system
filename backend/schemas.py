@@ -42,6 +42,7 @@ class ApplicationCreate(BaseModel):
 
 class PredictionOut(BaseModel):
     default_probability: float
+    explanation_summary: Optional[str] = None
     predicted_at: datetime
 
     class Config:

@@ -8,10 +8,12 @@ Run locally with:
     uvicorn main:app --reload --port 8000
 """
 
+import json
 import uuid
 
 import httpx
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 import models
@@ -23,7 +25,6 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Credit Scoring Backend", version="0.1.0")
 
-from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
@@ -76,6 +77,8 @@ def submit_application(payload: schemas.ApplicationCreate, db: Session = Depends
             risk_flag_no_installment_history=str(
                 prediction_result.get("risk_flag_no_installment_history")
             ),
+            explanation_summary=json.dumps(prediction_result.get("top_factors", [])),
+
         )
         db.add(prediction)
         db.commit()
