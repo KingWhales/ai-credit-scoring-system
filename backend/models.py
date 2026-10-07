@@ -1,3 +1,4 @@
+from sqlalchemy import Date
 """
 models.py
 
@@ -62,6 +63,7 @@ class Application(Base):
     amt_annuity = Column(Float, nullable=True)
     amt_goods_price = Column(Float, nullable=True)
     days_employed = Column(Integer, nullable=True)
+    date_of_birth = Column(Date, nullable=True)
     name_education_type = Column(String, nullable=True)
     name_family_status = Column(String, nullable=True)
     name_income_type = Column(String, nullable=True)

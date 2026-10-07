@@ -6,8 +6,9 @@ Kept separate from models.py (SQLAlchemy) since API contracts and
 database structure don't always need to evolve in lockstep.
 """
 
+from pydantic import field_validator
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, EmailStr
@@ -29,6 +30,17 @@ class ApplicationCreate(BaseModel):
     amt_annuity: Optional[float] = None
     amt_goods_price: Optional[float] = None
     days_employed: Optional[int] = None
+    date_of_birth: Optional[date] = None
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def check_age(cls, v):
+        if v is not None:
+            age = (date.today() - v).days / 365.25
+            if age < 18 or age > 100:
+                raise ValueError("Applicant must be between 18 and 100 years old")
+        return v
+
     name_education_type: Optional[str] = None
     name_family_status: Optional[str] = None
     name_income_type: Optional[str] = None

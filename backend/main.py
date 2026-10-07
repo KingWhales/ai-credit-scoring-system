@@ -8,6 +8,7 @@ Run locally with:
     uvicorn main:app --reload --port 8000
 """
 
+from datetime import date
 import json
 import uuid
 
@@ -70,6 +71,10 @@ def submit_application(payload: schemas.ApplicationCreate, db: Session = Depends
             for k, v in application_fields.items()
             if v is not None
         }
+        dob = ml_input.pop("date_of_birth", None)
+        if dob is not None:
+            ml_input["days_birth"] = -(date.today() - dob).days
+
         prediction_result = get_default_prediction(ml_input)
 
         prediction = models.Prediction(

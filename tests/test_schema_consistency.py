@@ -16,7 +16,6 @@ from ml_client import FIELD_NAME_MAP  # noqa: E402
 # Remove an entry once it is fixed; the test then enforces it.
 KNOWN_GAPS = {
     "CODE_GENDER": "Not collected on purpose: gender should not drive credit decisions. Retrain without it.",
-    "DAYS_BIRTH": "KNOWN GAP: applicant age is not collected yet, so the model scores without it.",
 }
 
 

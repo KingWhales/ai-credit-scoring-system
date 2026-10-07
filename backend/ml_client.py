@@ -25,6 +25,7 @@ FIELD_NAME_MAP = {
     "amt_annuity": "AMT_ANNUITY",
     "amt_goods_price": "AMT_GOODS_PRICE",
     "days_employed": "DAYS_EMPLOYED",
+    "days_birth": "DAYS_BIRTH",
     "name_education_type": "NAME_EDUCATION_TYPE",
     "name_family_status": "NAME_FAMILY_STATUS",
     "name_income_type": "NAME_INCOME_TYPE",

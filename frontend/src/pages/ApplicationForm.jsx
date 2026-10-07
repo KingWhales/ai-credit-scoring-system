@@ -8,6 +8,7 @@ const initialFormState = {
   amt_annuity: "",
   amt_goods_price: "",
   days_employed: "",
+  date_of_birth: "",
   name_education_type: "Higher education",
   name_family_status: "Married",
   name_income_type: "Working",
@@ -53,6 +54,7 @@ function ApplicationForm() {
       amt_annuity: form.amt_annuity ? Number(form.amt_annuity) : null,
       amt_goods_price: form.amt_goods_price ? Number(form.amt_goods_price) : null,
       days_employed: form.days_employed ? Number(form.days_employed) : null,
+      date_of_birth: form.date_of_birth || null,
       cnt_children: Number(form.cnt_children),
       ext_source_1: form.ext_source_1 ? Number(form.ext_source_1) : null,
       ext_source_2: form.ext_source_2 ? Number(form.ext_source_2) : null,
@@ -216,6 +218,17 @@ function ApplicationForm() {
               value={form.cnt_children}
               onChange={handleChange}
               min="0"
+            />
+          </label>
+          <label>
+            Date of Birth
+            <input
+              type="date"
+              name="date_of_birth"
+              value={form.date_of_birth}
+              max={new Date().toISOString().split("T")[0]}
+              onChange={handleChange}
+              required
             />
           </label>
         </fieldset>
