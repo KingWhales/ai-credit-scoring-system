@@ -23,6 +23,7 @@ from ml_client import get_default_prediction
 
 Base.metadata.create_all(bind=engine)
 
+head -30 backend/main.py
 app = FastAPI(title="Credit Scoring Backend", version="0.1.0")
 
 
