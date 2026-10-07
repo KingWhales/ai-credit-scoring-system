@@ -34,7 +34,15 @@ pipeline {
                 '''
             }
         }
-
+        stage('Test') {
+            steps {
+                sh '''
+                    . .venv-ci/bin/activate
+                    pip install --quiet pytest httpx
+                    pytest tests -q
+                '''
+            }
+        }
         stage('Build images') {
             steps {
                 sh 'docker compose build'
