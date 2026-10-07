@@ -38,7 +38,7 @@ pipeline {
             steps {
                 sh '''
                     . .venv-ci/bin/activate
-                    pip install --quiet pytest httpx
+                    pip install --quiet pytest httpx python-dotenv
                     pytest tests -q
                 '''
             }
