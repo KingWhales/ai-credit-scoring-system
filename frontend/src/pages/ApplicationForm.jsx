@@ -226,7 +226,7 @@ function ApplicationForm() {
               type="date"
               name="date_of_birth"
               value={form.date_of_birth}
-              max={new Date().toISOString().split("T")[0]}
+              max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split("T")[0]}
               onChange={handleChange}
               required
             />
