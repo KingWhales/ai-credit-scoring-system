@@ -127,3 +127,33 @@ The system is functionally complete end-to-end for a single applicant flow:
 - [ ] Applicant-facing status tracking view
 - [ ] Formal system evaluation (Objective 7): predictive accuracy, explainability, and usability assessment
 - [ ] Containerize all services (Dockerfiles for backend, ml-service, frontend) ahead of the DevOps pipeline (Objective 8)
+
+---
+
+## Explainability in the Admin Dashboard (Objectives 5, 6)
+
+- `ml-service` `/predict` now returns the top 5 SHAP factors per prediction (feature, value, contribution, direction) alongside the default probability.
+- The backend stores them as JSON in `predictions.explanation_summary`; the admin dashboard's "Why?" button expands them for the loan officer.
+
+## Containerization (Phase 3)
+
+- Dockerfiles for `ml-service`, `backend` and `frontend` (multi-stage: Node build, then nginx). `.dockerignore` files keep venvs, data and caches out of images.
+- `docker-compose.yml` runs db, ml-service, backend and frontend together: Postgres healthcheck, named volume `pgdata`, secrets read from a gitignored root `.env`.
+- Lessons: the containerised frontend needed `http://localhost:3000` added to the backend CORS origins; a running container does not see code edits until its image is rebuilt; services reach each other by compose service name, not `localhost`.
+
+## CI/CD with Jenkins (Phases 4-5, local-first)
+
+- Jenkins runs in Docker (`infra/jenkins`) with the host Docker socket mounted, so pipelines can build and deploy the compose stack.
+- Poll SCM every 2 minutes triggers builds, because a GitHub webhook cannot reach localhost. The DB password comes from a Jenkins credential, never from Git.
+- `Jenkinsfile` stages: Checkout, Lint (flake8: syntax errors and undefined names), Test (pytest), Build images, Deploy (`docker compose up -d`), Smoke test (`/health` on backend and ml-service).
+- Build #3 failed at Lint: stray terminal text pasted into `backend/main.py`. Deploy was blocked and the running app stayed healthy.
+- Build #6 failed at Test: `python-dotenv` missing in the CI environment. Later stages were skipped.
+- Schema-consistency test (`tests/test_schema_consistency.py`) compares the backend's `FIELD_NAME_MAP` with the ML service's `ApplicantInput`. It found that `DAYS_BIRTH` (age) and `CODE_GENDER` are never sent to the model. Gender is deliberately excluded (fairness); age is a known gap to fix. Both are recorded in `KNOWN_GAPS`.
+
+## Next Steps
+
+- [ ] Collect applicant age and map it to `DAYS_BIRTH`; retrain without `CODE_GENDER`
+- [ ] Model-validation gate in the pipeline (fail the build if AUC drops below a threshold)
+- [ ] Prometheus + Grafana monitoring
+- [ ] Screenshots of the pipeline in `docs/screenshots/`
+- [ ] System evaluation (accuracy, explainability, usability)
