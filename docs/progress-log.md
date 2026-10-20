@@ -157,3 +157,16 @@ The system is functionally complete end-to-end for a single applicant flow:
 - [ ] Prometheus + Grafana monitoring
 - [ ] Screenshots of the pipeline in `docs/screenshots/`
 - [ ] System evaluation (accuracy, explainability, usability)
+
+## 2026-10-20: Date of birth gap found by CI and fixed
+
+- The schema-consistency test in Jenkins showed the backend never sent DAYS_BIRTH
+  to the ML service, so applicant age was silently ignored.
+- Fix: DOB collected in the form (picker limited to 18+), validated 18-100,
+  stored on applications, converted to DAYS_BIRTH in the backend, mapped in ml_client.
+- Backward-compatible migration: ALTER TABLE applications ADD COLUMN IF NOT EXISTS date_of_birth DATE.
+- Verified end to end: identical inputs with different DOB gave 23.3% vs 29.8%
+  (earlier prediction without age: 10.4%).
+- CODE_GENDER deliberately not sent (fairness). Follow-up: retrain without it.
+- CI/CD evidence: build #3 blocked at Lint, build #6 blocked at Test, then green builds.
+  Screenshots in docs/screenshots/.
