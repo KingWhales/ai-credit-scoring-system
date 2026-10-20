@@ -67,7 +67,7 @@ function ApplicationForm() {
     } catch (err) {
       setError(
         err.response?.data?.detail
-          ? JSON.stringify(err.response.data.detail)
+          ? (Array.isArray(err.response.data.detail) ? err.response.data.detail.map((e) => String(e.msg).replace(/^Value error, /, "")).join("; ") : String(err.response.data.detail))
           : "Something went wrong submitting your application."
       );
     } finally {
