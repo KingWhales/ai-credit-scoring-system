@@ -34,6 +34,36 @@ BEHAVIORAL_COLS = [
 
 app = FastAPI(title="Credit Scoring ML Service", version="0.2.0")
 
+# --- Prometheus monitoring ---
+import time as _time
+from fastapi import Request as _Request
+from fastapi.responses import Response as _Response
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+
+REQUEST_COUNT = Counter("http_requests_total", "Total HTTP requests", ["method", "path", "status"])
+REQUEST_LATENCY = Histogram("http_request_duration_seconds", "HTTP request latency in seconds", ["method", "path"])
+
+
+@app.middleware("http")
+async def _metrics_middleware(request: _Request, call_next):
+    start = _time.perf_counter()
+    status = 500
+    try:
+        response = await call_next(request)
+        status = response.status_code
+        return response
+    finally:
+        route = request.scope.get("route")
+        path = route.path if route else "unmatched"
+        if path != "/metrics":
+            REQUEST_COUNT.labels(request.method, path, str(status)).inc()
+            REQUEST_LATENCY.labels(request.method, path).observe(_time.perf_counter() - start)
+
+
+@app.get("/metrics", include_in_schema=False)
+def _metrics():
+    return _Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
 # Loaded once at startup
 pipeline = None
 expected_columns = None

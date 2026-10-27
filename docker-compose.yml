@@ -48,5 +48,33 @@ services:
     depends_on:
       - backend
 
+  prometheus:
+    build: ./monitoring/prometheus
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+    depends_on:
+      - backend
+      - ml-service
+
+  grafana:
+    build: ./monitoring/grafana
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?set GRAFANA_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
 volumes:
   pgdata:
+  prometheus_data:
+  grafana_data:

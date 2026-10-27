@@ -11,6 +11,7 @@ pipeline {
         POSTGRES_USER        = 'creditadmin'
         POSTGRES_DB          = 'credit_scoring'
         POSTGRES_PASSWORD    = credentials('postgres-password')
+        GRAFANA_PASSWORD  = credentials('grafana-password')
     }
 
     stages {
