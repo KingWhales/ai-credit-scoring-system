@@ -170,3 +170,13 @@ The system is functionally complete end-to-end for a single applicant flow:
 - CODE_GENDER deliberately not sent (fairness). Follow-up: retrain without it.
 - CI/CD evidence: build #3 blocked at Lint, build #6 blocked at Test, then green builds.
   Screenshots in docs/screenshots/.
+
+## 2026-10-27: Model validation gate in CI
+
+- train.py now writes ml-service/models/metrics.json (AUC-ROC and SHA-256 of the model file).
+- tests/test_model_gate.py fails the build if AUC < 0.75 or if the committed model
+  does not match its recorded metrics.
+- Training is deterministic: a re-run reproduced the identical model (same hash, AUC 0.756).
+- Demonstrated: a deliberately raised threshold (0.99) blocked build #15 at Test; Deploy was skipped.
+- Limitation: Jenkins verifies the committed metrics rather than retraining, because the
+  Home Credit dataset is not in the repo.
