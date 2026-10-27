@@ -180,3 +180,14 @@ The system is functionally complete end-to-end for a single applicant flow:
 - Demonstrated: a deliberately raised threshold (0.99) blocked build #15 at Test; Deploy was skipped.
 - Limitation: Jenkins verifies the committed metrics rather than retraining, because the
   Home Credit dataset is not in the repo.
+
+## 2026-10-27: Monitoring with Prometheus and Grafana
+
+- backend and ml-service expose /metrics (request count and latency histogram via prometheus-client middleware).
+- Prometheus scrapes both services every 10 s; Grafana has a provisioned datasource and the
+  "Credit Scoring Overview" dashboard (request rate, p95 latency, 5xx errors, service up).
+- Config is baked into small images (monitoring/*/Dockerfile) instead of bind mounts, because Jenkins
+  deploys through the host Docker socket and bind-mount paths would resolve on the host.
+- Grafana admin password comes from a Jenkins secret (grafana-password) and the local .env; nothing is committed.
+- Lesson: the first build of a new service is slow (large base images); a local `docker compose build`
+  warmed the cache so the next Jenkins build succeeded.
