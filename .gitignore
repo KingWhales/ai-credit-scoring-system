@@ -5,3 +5,4 @@ ml-service/venv/
 *.pyc
 *:Zone.Identifier
 .env
+*:Zone.Identifier

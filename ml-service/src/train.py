@@ -73,6 +73,18 @@ def train_and_evaluate():
 
     MODEL_DIR.mkdir(exist_ok=True)
     joblib.dump(pipeline, MODEL_PATH)
+
+    # Record metrics so CI can gate on model quality
+    import hashlib
+    import json
+    import os
+    model_file = str(MODEL_PATH)
+    with open(model_file, 'rb') as f:
+        model_sha = hashlib.sha256(f.read()).hexdigest()
+    metrics = {'model': 'xgboost', 'auc_roc': round(float(auc), 4), 'model_sha256': model_sha}
+    with open(os.path.join(os.path.dirname(model_file), 'metrics.json'), 'w') as f:
+        json.dump(metrics, f, indent=2)
+    print(f'Wrote metrics: {metrics}')
     print(f"\nModel saved to {MODEL_PATH}")
 
     return pipeline, X_test, y_test

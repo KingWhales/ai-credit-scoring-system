@@ -1,0 +1,5 @@
+{
+  "model": "xgboost",
+  "auc_roc": 0.756,
+  "model_sha256": "016a7cf41062b4686a786dba311de926dc2894a47c573d2ccb23f1556c4cad8c"
+}
