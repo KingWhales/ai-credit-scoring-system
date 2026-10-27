@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MODELS = ROOT / "ml-service" / "models"
-MIN_AUC = 0.75
+MIN_AUC = 0.99
 
 
 def _metrics():
