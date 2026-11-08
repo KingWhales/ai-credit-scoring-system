@@ -69,6 +69,26 @@ pipeline = None
 expected_columns = None
 explainer = None
 
+# --- Model metrics ---
+import json as _json
+from pathlib import Path as _Path
+from prometheus_client import Gauge
+
+PREDICTED_PD = Histogram(
+    "credit_default_probability",
+    "Predicted default probability per scored application",
+    buckets=[0.02, 0.05, 0.075, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.75, 1.0],
+)
+PREDICTIONS_TOTAL = Counter("credit_predictions_total", "Predictions served by the ML service")
+MODEL_AUC = Gauge("model_auc_roc", "AUC-ROC recorded at training time for the deployed model")
+MODEL_INFO = Gauge("model_info", "Deployed model identity", ["model", "sha256"])
+try:
+    _m = _json.loads((_Path(__file__).resolve().parent / "models" / "metrics.json").read_text())
+    MODEL_AUC.set(_m["auc_roc"])
+    MODEL_INFO.labels(_m["model"], _m["model_sha256"][:12]).set(1)
+except Exception:
+    pass
+
 @app.on_event("startup")
 def load_model():
     global pipeline, expected_columns, explainer
@@ -214,6 +234,8 @@ def predict(applicant: ApplicantInput):
 
     feature_row = build_feature_row(applicant)
     probability = float(pipeline.predict_proba(feature_row)[0][1])
+    PREDICTED_PD.observe(probability)
+    PREDICTIONS_TOTAL.inc()
     top_factors = compute_top_factors(feature_row)
 
     return PredictionResponse(
