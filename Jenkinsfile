@@ -70,6 +70,26 @@ pipeline {
                 '''
             }
         }
+
+        stage('Monitoring check') {
+            steps {
+                sh '''
+                    for i in $(seq 1 24); do
+                        if docker compose exec -T backend python3 -c "
+import json, urllib.request as u
+for url in ('http://backend:8000/metrics', 'http://ml-service:8001/metrics'):
+    assert b'# HELP' in u.urlopen(url).read(), url
+t = json.load(u.urlopen('http://prometheus:9090/api/v1/targets'))['data']['activeTargets']
+assert len(t) >= 2 and all(x['health'] == 'up' for x in t), [(x['labels']['job'], x['health']) for x in t]
+print('Monitoring OK:', [(x['labels']['job'], x['health']) for x in t])
+"; then exit 0; fi
+                        echo "Waiting for Prometheus targets ($i/24)..."; sleep 5
+                    done
+                    docker compose logs --tail=30 prometheus
+                    exit 1
+                '''
+            }
+        }
     }
 
     post {
