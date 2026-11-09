@@ -197,3 +197,4 @@ The system is functionally complete end-to-end for a single applicant flow:
 - Dashboard extended from 4 to 8 panels: deployed model AUC, applications scored (24h), average predicted default probability, PD distribution.
 - Bug found: the Grafana dashboards were copied into `/var/lib/grafana/dashboards`, which is hidden by the `grafana_data` volume mount, so updates never reached the running container. Fixed by moving provisioned dashboards to `/etc/grafana/dashboards` and resetting the volume once.
 - Lesson: never bake files into a path that a named volume is mounted over.
+- Evidence: ![Grafana dashboard with model metrics](screenshots/grafana-model-metrics-dashboard.png)
