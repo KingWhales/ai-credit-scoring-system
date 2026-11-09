@@ -191,3 +191,9 @@ The system is functionally complete end-to-end for a single applicant flow:
 - Grafana admin password comes from a Jenkins secret (grafana-password) and the local .env; nothing is committed.
 - Lesson: the first build of a new service is slow (large base images); a local `docker compose build`
   warmed the cache so the next Jenkins build succeeded.
+
+## 2026-11-09 — Model-specific metrics and Grafana dashboard fix
+- ML service now exports `credit_default_probability` (histogram), `credit_predictions_total`, `model_auc_roc` (read from `metrics.json`) and `model_info` (model name + hash prefix).
+- Dashboard extended from 4 to 8 panels: deployed model AUC, applications scored (24h), average predicted default probability, PD distribution.
+- Bug found: the Grafana dashboards were copied into `/var/lib/grafana/dashboards`, which is hidden by the `grafana_data` volume mount, so updates never reached the running container. Fixed by moving provisioned dashboards to `/etc/grafana/dashboards` and resetting the volume once.
+- Lesson: never bake files into a path that a named volume is mounted over.
